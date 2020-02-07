@@ -1,0 +1,17 @@
+Build instructions:
+
+(Assuming opencv is already installed.)
+
+Linux:
+
+1. Navigate to the top level directory 
+    cd modiface
+
+2. Run cmake
+    cmake .
+    
+3. Run make
+    make
+    
+4. Execute the program with an image:
+    ./DisplayImage <filepath>
