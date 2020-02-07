@@ -48,7 +48,7 @@ int main(int argc, char** argv )
     //Boosting the contrast of the image
     boostContrast(1.5,new_image);
     
-    //Detecting face and blurring
+    //Detecting face and draw circle
     findFace(new_image);
     
     //Blur image
@@ -110,16 +110,82 @@ void boostContrast(double alpha, cv::Mat &image){
     }
 }
 
+void blurEdge(cv::Mat&image){
+    cv::Mat background = image.clone();
+    cv::blur(background,background,cv::Size(10,10));
+    cv::Mat cropedImage = background(cv::Rect(50,50,200,220));
+    cv::GaussianBlur(cropedImage, image, cv::Size(0, 0), 3);
+    cv::addWeighted(cropedImage, -0.5, image, 1.5, 0, image);
+    cv::imwrite("background.png", cropedImage);
+
+}
+
+// void blurEdge(cv::Mat&image){
+//     //Draw a circle for mask
+//     cv::Point center; 
+//     center.x = image.cols/2;
+//     center.y = image.rows/2;
+//     cv::Mat mask = cv::Mat::zeros(image.rows,image.cols,CV_8UC1);
+//     circle(mask,center,image.rows/3,cv::Scalar(255,255,255),-1,8,0);
+//     
+//     //Copy the image under mask
+//     cv::Mat result(image.size(),CV_8UC1, cv::Scalar(0, 0, 0));
+//     image.copyTo(result,mask);
+//     
+//     
+// 
+// //     cv::Mat temp,alpha;
+// //     cv::Mat dest(image.rows,image.cols,CV_8UC4);
+// //     cv::cvtColor(result,temp,cv::COLOR_BGR2GRAY);
+// //     cv::threshold(temp,alpha,100,255,cv::THRESH_BINARY);
+// //     cv::Mat rgb[3];
+// //     cv::split(result,rgb);
+// //     cv::Mat rgba[4]={rgb[0],rgb[1],rgb[2],alpha};
+// //     cv::merge(rgba,4,dest);
+//     
+//     
+//     cv::imwrite("result.png", dest);
+//     
+//     
+//     //Blur background
+//     cv::blur(image,image,cv::Size(10,10));
+//     
+//     //Reapply the cropped ROI
+//     cv::addWeighted(image,0.5, result, .5, 0.0, image);
+// }
+
+/*
 void blurEdge(cv::Mat &image){
     //Blur background
-    //cv::Mat background = image.clone();
-    //cv::blur(background,background,cv::Size(10,10));
+    cv::Mat background = image.clone();
+    cv::blur(background,background,cv::Size(10,10));
     
-    cv::Rect region(0, 0, 50, image.rows);
-    cv::GaussianBlur(image(region), image(region), cv::Size(0, 0), 4);
+    //cv::Rect region(0, 0, 50, image.rows);
+    //cv::GaussianBlur(image(region), image(region), cv::Size(0, 0), 4);
+    
+
+    cv::Vec3f circ(background.cols/2,background.rows/2,background.cols/2);//Hough circle
+    
+    
+    //Daw the mask
+    //cv::Mat1b mask(background.size(),uchar(0));
+    //circle(mask, cv::Point(circ[0],circ[1]),circ[2], cv::Scalar(255),cv::FILLED);
+    
+    //Bounding box
+    cv::Rect bbox(circ[0] - circ[2], circ[1] - circ[2], 2 * circ[2], 2 * circ[2]);
+    
+    
+    //Crop
+    //background.copyTo(background,mask);
+    //background = background(bbox);
+    
     //Re apply the image ontop
+    background = background(bbox);
+    cv::imwrite("background.png", background);
+    cv::addWeighted(image, 0, background, 1, 0.0, image);
+    
     //cv::GaussianBlur(image, background, cv::Size(0, 0), 3);
-    //cv::addWeighted(image, 1.5, background, -0.5, 0, background);
+    
     
     /*
     //First convert to greyscale
@@ -148,5 +214,6 @@ void blurEdge(cv::Mat &image){
     cv::merge(ch_img,result);
     cv::merge(ch_bg,bg);
     imshow("result",result);
-    */
-}
+    
+}*/
+
