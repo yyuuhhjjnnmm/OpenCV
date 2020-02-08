@@ -11,6 +11,9 @@
  * https://docs.opencv.org/2.4/doc/tutorials/introduction/linux_gcc_cmake/linux_gcc_cmake.html
  * https://docs.opencv.org/3.4/d3/dc1/tutorial_basic_linear_transform.html
  * https://www.codementor.io/@shashwatjain661/how-detect-faces-using-opencv-and-python-c-nwyssng68
+ * https://docs.opencv.org/2.4/doc/tutorials/objdetect/cascade_classifier/cascade_classifier.html
+ * 
+ * 
  */
 
 
@@ -45,14 +48,17 @@ int main(int argc, char** argv )
     //First copying over the original image into new_image
     cv::Mat new_image = image.clone();
     
-    //Boosting the contrast of the image
-    boostContrast(1.5,new_image);
-    
     //Detecting face and draw circle
     findFace(new_image);
     
+    //Boosting the contrast of the image
+    //boostContrast(1.5,new_image);
+    new_image.convertTo(new_image,-1,2,0);
+    
+    
+    
     //Blur image
-    blurEdge(new_image);
+    //blurEdge(new_image);
     
     //Concat the two images to output
     cv::Mat composite_image;
@@ -66,37 +72,33 @@ int main(int argc, char** argv )
 }
 
 void findFace(cv::Mat &image){
-    //convert to grayscale for ease of detection
+    //convert to grayscale for ease of detection & equalize
     std::vector<cv::Rect> faces;
     cv::Mat image_grey;
     cv::cvtColor(image,image_grey,cv::COLOR_BGR2GRAY);
-    
+    cv::equalizeHist(image_grey,image_grey);
     
     //Declaring and instantiating CascadeClassifier for facial detection
     cv::CascadeClassifier cascade;
-    cascade.load("haarcascade_frontalcatface_extended.xml");
-    cascade.detectMultiScale(image_grey,faces);
-    
-    //read for drawing
-    cv::Scalar color = cv::Scalar(0, 0, 255);
-    
-    //Draw circle around the face(s)
-    for ( size_t i = 0; i < faces.size(); i++ )
-    {
-        cv::Rect r = faces[i];
-        cv::Point center; 
-        int radius;
-        
-        center.x = cvRound((r.x + r.width*0.5)); 
-        center.y = cvRound((r.y + r.height*0.5)); 
-        radius = cvRound((r.width + r.height)); 
-        circle( image, center, radius, color, 3, 8, 0 ); 
-    }
+    cascade.load("haarcascade_frontalface_alt.xml");
 
+    //Detect the faces
+    cascade.detectMultiScale(image_grey,faces,1.1,2,0|cv::CASCADE_SCALE_IMAGE,cv::Size(30,30)); 
+    
+    //Draw circles around faces
+    for( size_t i = 0; i < faces.size(); i++ )
+    {
+        cv::Point center( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height*0.5 );
+        cv::ellipse( image, center, cv::Size( faces[i].width*0.5, faces[i].height*0.5), 0, 0, 360, cv::Scalar( 255, 0, 255 ), 4, 8, 0 );
+
+        cv::Mat faceROI = image_grey( faces[i] );
+        std::vector<cv::Rect> eyes;
+    }
     
     std::cout << "deteceted " << faces.size() << "faces" << std::endl;
     
 }
+
 
 void boostContrast(double alpha, cv::Mat &image){
     for( int y = 0; y < image.rows; y++ ) {
