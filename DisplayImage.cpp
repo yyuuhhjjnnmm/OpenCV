@@ -13,6 +13,7 @@
  * https://www.codementor.io/@shashwatjain661/how-detect-faces-using-opencv-and-python-c-nwyssng68
  * https://docs.opencv.org/2.4/doc/tutorials/objdetect/cascade_classifier/cascade_classifier.html
  * https://stackoverflow.com/questions/39013970/opencv-function-to-merge-mats-except-for-black-transparent-pixels
+ * https://docs.opencv.org/3.4.9/d2/dbd/tutorial_distance_transform.html
  * 
  */
 
@@ -51,7 +52,7 @@ int main(int argc, char** argv )
     blurEdge(new_image);
     
     //Boosting the contrast of the image
-    adjustContrast(1.75,new_image);
+    adjustContrast(1.5,new_image);
     
     //Concat the two images to output
     cv::Mat composite_image;
@@ -96,7 +97,42 @@ void findFace(cv::Mat &image){
     std::cout << "Deteceted " << faces.size() << " faces!" << std::endl;
 }
 
-void blurEdge(cv::Mat &image){ 
+void blurEdge(cv::Mat &image){
+    //Blur background
+    cv::Mat background = image.clone();
+    cv::blur(image,background,cv::Size(10,10));
+
+    //Greyscale
+    cv::Mat image_grey;
+    cv::cvtColor(image,image_grey,cv::COLOR_BGR2GRAY);
+    
+    //Distance transform, get the relative distance of pixels
+    cv::Mat dist;
+    cv::distanceTransform(image_grey, dist, cv::DIST_L2, 3);
+    
+    //Nomalize and add threshold to bring out contours
+    cv::normalize(dist, dist, 0, 1.0, cv::NORM_MINMAX);
+    cv::threshold(dist, dist, 0.4, 1.0, cv::THRESH_BINARY);
+    
+    //Dilate to extract peaks
+    cv::Mat kernel1 = cv::Mat::ones(3, 3, CV_8U);
+    cv::dilate(dist, dist, kernel1);
+
+    //Overlay images to create blur effect
+    imshow("image",image);
+    
+    
+    cv::Mat mask;
+    cv::inRange(dist, cv::Scalar(0,0,0), cv::Scalar(0,0,0), mask);
+    cv::Mat res;
+    image.copyTo(res, mask);
+    
+    cv::Mat edge_mask;
+    cv::find
+    cv::addWeighted(background, 1, res, 1, 0, image);
+}
+
+void blurCrop(cv::Mat &image){ 
     // A circle for mask, centered
     cv::Vec3f circ(image.cols/2,image.rows/2,image.rows/3);
 
