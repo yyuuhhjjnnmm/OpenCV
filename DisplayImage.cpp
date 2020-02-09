@@ -22,6 +22,7 @@
 void adjustContrast(double alpha, cv::Mat &image);
 void findFace(cv::Mat &image);
 void blurEdge(cv::Mat &image);
+void MaskedSmoothOptimised(cv::Mat mSrc,cv::Mat mMask,cv::Mat &mDst, double Sigma, double MaskRadius);
 int main(int argc, char** argv )
 {
     //Original image
@@ -45,14 +46,16 @@ int main(int argc, char** argv )
     //First copying over the original image into new_image
     cv::Mat new_image = image.clone();
     
+        //Blur image
+    blurEdge(new_image);
+    
     //Detecting face and drawing circle around it
     findFace(new_image);
     
-    //Blur image
-    blurEdge(new_image);
+
     
     //Boosting the contrast of the image
-    adjustContrast(1.5,new_image);
+    //adjustContrast(1.5,new_image);
     
     //Concat the two images to output
     cv::Mat composite_image;
@@ -97,6 +100,29 @@ void findFace(cv::Mat &image){
     std::cout << "Deteceted " << faces.size() << " faces!" << std::endl;
 }
 
+// void CannyThreshold(int, void*)
+// {
+//    //reducing noise
+//    blur(src_gray, detected_edges, Size(3,3));
+// 
+//    //Canny function for detection of edges
+//    Canny(detected_edges,detected_edges, lowThreshold,lowThreshold*ratio, kernel_size);
+//    //show detected edges in source image
+//    imshow(window_name, detected_edges);
+// 
+//    //4 steps from stack owerflow
+//    dilate(detected_edges, blurred, Mat()); //1
+//    imshow(window_name2, blurred);
+// 
+//    src.copyTo(blurred,blurred);            //2
+//    blur(blurred, blurred ,Size(10,10));    //3
+//    imshow(window_name3, blurred);
+// 
+//    //here can by a problem when I copy image from step 3 to source image with detected_edges mask.
+//    blurred.copyTo(src,detected_edges);     //4
+//    imshow(window_name4, src);              //final image 
+// }
+
 void blurEdge(cv::Mat &image){
     //Blur background
     cv::Mat background = image.clone();
@@ -109,27 +135,34 @@ void blurEdge(cv::Mat &image){
     //Distance transform, get the relative distance of pixels
     cv::Mat dist;
     cv::distanceTransform(image_grey, dist, cv::DIST_L2, 3);
-    
+        //imshow("dt",dist);
+
     //Nomalize and add threshold to bring out contours
     cv::normalize(dist, dist, 0, 1.0, cv::NORM_MINMAX);
-    cv::threshold(dist, dist, 0.4, 1.0, cv::THRESH_BINARY);
-    
+
+    cv::threshold(dist, dist, 0.4, 0.7, cv::THRESH_BINARY);
+    //adjustContrast(0.25,dist);
     //Dilate to extract peaks
     cv::Mat kernel1 = cv::Mat::ones(3, 3, CV_8U);
     cv::dilate(dist, dist, kernel1);
 
-    //Overlay images to create blur effect
-    imshow("image",image);
+
     
     
     cv::Mat mask;
     cv::inRange(dist, cv::Scalar(0,0,0), cv::Scalar(0,0,0), mask);
+
     cv::Mat res;
     image.copyTo(res, mask);
+    cv::blur(image,image,cv::Size(10,10));
+    imshow("res",res);
+    cv::Mat foreground;
+    cv::inRange(res, cv::Scalar(0,0,0), cv::Scalar(0,0,0), foreground);
+    res.copyTo(image,255-foreground);
+    imshow("image",image);
     
-    cv::Mat edge_mask;
-    cv::find
-    cv::addWeighted(background, 1, res, 1, 0, image);
+    
+    //cv::addWeighted(background, 0.5, image, 0.5, 0, image);
 }
 
 void blurCrop(cv::Mat &image){ 
