@@ -100,27 +100,45 @@ void findFace(cv::Mat &image){
     std::cout << "Deteceted " << faces.size() << " faces!" << std::endl;
 }
 
-// void CannyThreshold(int, void*)
-// {
-//    //reducing noise
-//    blur(src_gray, detected_edges, Size(3,3));
+// void blurMaskEdge(cv::Mat mask){
+//     cv::namedWindow("result");
+//     Mat img=imread("TestImg.png");
+//     Mat whole_image=imread("D:\\ImagesForTest\\lena.jpg");
+//     whole_image.convertTo(whole_image,CV_32FC3,1.0/255.0);
+//     cv::resize(whole_image,whole_image,img.size());
+//     img.convertTo(img,CV_32FC3,1.0/255.0);
 // 
-//    //Canny function for detection of edges
-//    Canny(detected_edges,detected_edges, lowThreshold,lowThreshold*ratio, kernel_size);
-//    //show detected edges in source image
-//    imshow(window_name, detected_edges);
+//     Mat bg=Mat(img.size(),CV_32FC3);
+//     bg=Scalar(1.0,1.0,1.0);
 // 
-//    //4 steps from stack owerflow
-//    dilate(detected_edges, blurred, Mat()); //1
-//    imshow(window_name2, blurred);
+//     // Prepare mask
+//     Mat mask;
+//     Mat img_gray;
+//     cv::cvtColor(img,img_gray,cv::COLOR_BGR2GRAY);
+//     img_gray.convertTo(mask,CV_32FC1);
+//     threshold(1.0-mask,mask,0.9,1.0,cv::THRESH_BINARY_INV);
 // 
-//    src.copyTo(blurred,blurred);            //2
-//    blur(blurred, blurred ,Size(10,10));    //3
-//    imshow(window_name3, blurred);
+//     cv::GaussianBlur(mask,mask,Size(21,21),11.0);
+//     imshow("result",mask);
+//     cv::waitKey(0);
 // 
-//    //here can by a problem when I copy image from step 3 to source image with detected_edges mask.
-//    blurred.copyTo(src,detected_edges);     //4
-//    imshow(window_name4, src);              //final image 
+// 
+//         // Reget the image fragment with smoothed mask
+//     Mat res;
+// 
+//     vector<Mat> ch_img(3);
+//     vector<Mat> ch_bg(3);
+//     cv::split(whole_image,ch_img);
+//     cv::split(bg,ch_bg);
+//     ch_img[0]=ch_img[0].mul(mask)+ch_bg[0].mul(1.0-mask);
+//     ch_img[1]=ch_img[1].mul(mask)+ch_bg[1].mul(1.0-mask);
+//     ch_img[2]=ch_img[2].mul(mask)+ch_bg[2].mul(1.0-mask);
+//     cv::merge(ch_img,res);
+//     cv::merge(ch_bg,bg);
+// 
+//     imshow("result",res);
+//     cv::waitKey(0);
+//     cv::destroyAllWindows();
 // }
 
 void blurEdge(cv::Mat &image){
@@ -140,14 +158,11 @@ void blurEdge(cv::Mat &image){
     //Nomalize and add threshold to bring out contours
     cv::normalize(dist, dist, 0, 1.0, cv::NORM_MINMAX);
 
-    cv::threshold(dist, dist, 0.4, 0.7, cv::THRESH_BINARY);
+    cv::threshold(dist, dist, 0.5, 1.0, cv::THRESH_BINARY);
     //adjustContrast(0.25,dist);
     //Dilate to extract peaks
     cv::Mat kernel1 = cv::Mat::ones(3, 3, CV_8U);
     cv::dilate(dist, dist, kernel1);
-
-
-    
     
     cv::Mat mask;
     cv::inRange(dist, cv::Scalar(0,0,0), cv::Scalar(0,0,0), mask);
@@ -156,6 +171,31 @@ void blurEdge(cv::Mat &image){
     image.copyTo(res, mask);
     cv::blur(image,image,cv::Size(10,10));
     imshow("res",res);
+    
+    //Blurring edge
+    cv::Mat blurred_res;
+    
+    cv::Mat blurred_grey;
+    cv::cvtColor(res,blurred_grey,cv::COLOR_BGR2GRAY);
+    cv::blur(mask,blurred_res,cv::Size(3,3));
+    
+    cv::Mat detected_edges;
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    int thresh = 100;
+    cv::Canny(blurred_res,detected_edges,thresh, thresh*2,3);
+    cv::findContours(detected_edges, contours,hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0,0));
+    cv::RNG rng(12345);
+    cv::Mat drawing = cv::Mat::zeros(detected_edges.size(), CV_8UC3);
+        for(int idx = 0 ; idx >= 0; idx = hierarchy[idx][0] )
+    {
+                cv::Scalar color( rand()&255, rand()&255, rand()&255 );
+        drawContours( detected_edges, contours, idx, color, cv::FILLED, 100, hierarchy );
+    }
+    imshow( "DE", detected_edges );
+    imshow( "Contours", drawing );
+    
+    
     cv::Mat foreground;
     cv::inRange(res, cv::Scalar(0,0,0), cv::Scalar(0,0,0), foreground);
     res.copyTo(image,255-foreground);
