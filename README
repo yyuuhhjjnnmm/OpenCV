@@ -2,16 +2,17 @@ Build instructions:
 
 (Assuming opencv is already installed.)
 
-Linux:
+Linux/Unix/MacOS:
 
-1. Navigate to the top level directory 
+1. Navigate to the modiface folder
     cd modiface
 
-2. Run cmake
+2. Run cmake to get the appropriate makefiles
     cmake .
     
 3. Run make
     make
     
 4. Execute the program with an image:
+(by default it will use my own picture)
     ./DisplayImage <filepath>
