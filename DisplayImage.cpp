@@ -1,11 +1,9 @@
 #include <stdio.h>
 
-
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/objdetect.hpp>
-#include <opencv2/features2d.hpp>
 /*
  *Source code developed with reference to:
  * https://docs.opencv.org/2.4/doc/tutorials/introduction/linux_gcc_cmake/linux_gcc_cmake.html
@@ -22,7 +20,7 @@
 void adjustContrast(double alpha, cv::Mat &image);
 void findFace(cv::Mat &image);
 void blurEdge(cv::Mat &image);
-void MaskedSmoothOptimised(cv::Mat mSrc,cv::Mat mMask,cv::Mat &mDst, double Sigma, double MaskRadius);
+
 int main(int argc, char** argv )
 {
     //Original image
@@ -36,7 +34,6 @@ int main(int argc, char** argv )
         image = cv::imread( argv[1], 1 );
     }
 
-    
     //Error checking for image
     if (!image.data){
         printf("No image data!\n");
@@ -46,22 +43,18 @@ int main(int argc, char** argv )
     //First copying over the original image into new_image
     cv::Mat new_image = image.clone();
     
-        //Blur image
+    //Blur the background based on pixel distances
     blurEdge(new_image);
     
     //Detecting face and drawing circle around it
     findFace(new_image);
-    
 
-    
     //Boosting the contrast of the image
-    //adjustContrast(1.5,new_image);
+    adjustContrast(1.5,new_image);
     
-    //Concat the two images to output
+    //Concat the two images to output and print to screen
     cv::Mat composite_image;
     cv::hconcat(image,new_image,composite_image);
-    
-    //Print to screen
     cv::imshow("OpenCVTest", composite_image);
 
     cv::waitKey();
@@ -100,47 +93,6 @@ void findFace(cv::Mat &image){
     std::cout << "Deteceted " << faces.size() << " faces!" << std::endl;
 }
 
-// void blurMaskEdge(cv::Mat mask){
-//     cv::namedWindow("result");
-//     Mat img=imread("TestImg.png");
-//     Mat whole_image=imread("D:\\ImagesForTest\\lena.jpg");
-//     whole_image.convertTo(whole_image,CV_32FC3,1.0/255.0);
-//     cv::resize(whole_image,whole_image,img.size());
-//     img.convertTo(img,CV_32FC3,1.0/255.0);
-// 
-//     Mat bg=Mat(img.size(),CV_32FC3);
-//     bg=Scalar(1.0,1.0,1.0);
-// 
-//     // Prepare mask
-//     Mat mask;
-//     Mat img_gray;
-//     cv::cvtColor(img,img_gray,cv::COLOR_BGR2GRAY);
-//     img_gray.convertTo(mask,CV_32FC1);
-//     threshold(1.0-mask,mask,0.9,1.0,cv::THRESH_BINARY_INV);
-// 
-//     cv::GaussianBlur(mask,mask,Size(21,21),11.0);
-//     imshow("result",mask);
-//     cv::waitKey(0);
-// 
-// 
-//         // Reget the image fragment with smoothed mask
-//     Mat res;
-// 
-//     vector<Mat> ch_img(3);
-//     vector<Mat> ch_bg(3);
-//     cv::split(whole_image,ch_img);
-//     cv::split(bg,ch_bg);
-//     ch_img[0]=ch_img[0].mul(mask)+ch_bg[0].mul(1.0-mask);
-//     ch_img[1]=ch_img[1].mul(mask)+ch_bg[1].mul(1.0-mask);
-//     ch_img[2]=ch_img[2].mul(mask)+ch_bg[2].mul(1.0-mask);
-//     cv::merge(ch_img,res);
-//     cv::merge(ch_bg,bg);
-// 
-//     imshow("result",res);
-//     cv::waitKey(0);
-//     cv::destroyAllWindows();
-// }
-
 void blurEdge(cv::Mat &image){
     //Blur background
     cv::Mat background = image.clone();
@@ -153,58 +105,35 @@ void blurEdge(cv::Mat &image){
     //Distance transform, get the relative distance of pixels
     cv::Mat dist;
     cv::distanceTransform(image_grey, dist, cv::DIST_L2, 3);
-        //imshow("dt",dist);
+    //imshow("dt",dist);
 
     //Nomalize and add threshold to bring out contours
     cv::normalize(dist, dist, 0, 1.0, cv::NORM_MINMAX);
-
     cv::threshold(dist, dist, 0.5, 1.0, cv::THRESH_BINARY);
-    //adjustContrast(0.25,dist);
+    
     //Dilate to extract peaks
     cv::Mat kernel1 = cv::Mat::ones(3, 3, CV_8U);
     cv::dilate(dist, dist, kernel1);
     
+    //Cropping the area under the mask
+    //...inverting the colors, so we are getting the area inside the 
+    //...distance transform, instead of outside
     cv::Mat mask;
     cv::inRange(dist, cv::Scalar(0,0,0), cv::Scalar(0,0,0), mask);
-
     cv::Mat res;
     image.copyTo(res, mask);
     cv::blur(image,image,cv::Size(10,10));
-    imshow("res",res);
-    
-    //Blurring edge
-    cv::Mat blurred_res;
-    
-    cv::Mat blurred_grey;
-    cv::cvtColor(res,blurred_grey,cv::COLOR_BGR2GRAY);
-    cv::blur(mask,blurred_res,cv::Size(3,3));
-    
-    cv::Mat detected_edges;
-    std::vector<std::vector<cv::Point>> contours;
-    std::vector<cv::Vec4i> hierarchy;
-    int thresh = 100;
-    cv::Canny(blurred_res,detected_edges,thresh, thresh*2,3);
-    cv::findContours(detected_edges, contours,hierarchy, cv::RETR_TREE, cv::CHAIN_APPROX_SIMPLE, cv::Point(0,0));
-    cv::RNG rng(12345);
-    cv::Mat drawing = cv::Mat::zeros(detected_edges.size(), CV_8UC3);
-        for(int idx = 0 ; idx >= 0; idx = hierarchy[idx][0] )
-    {
-                cv::Scalar color( rand()&255, rand()&255, rand()&255 );
-        drawContours( detected_edges, contours, idx, color, cv::FILLED, 100, hierarchy );
-    }
-    imshow( "DE", detected_edges );
-    imshow( "Contours", drawing );
-    
-    
+    //imshow("res",res);
+ 
+    //Aggregating the final results, combining the mask with the blurred background
+    //... and removing the black background
     cv::Mat foreground;
     cv::inRange(res, cv::Scalar(0,0,0), cv::Scalar(0,0,0), foreground);
     res.copyTo(image,255-foreground);
-    imshow("image",image);
-    
-    
-    //cv::addWeighted(background, 0.5, image, 0.5, 0, image);
+    //imshow("image",image);
 }
 
+//First iterations of blur function, with fixed center
 void blurCrop(cv::Mat &image){ 
     // A circle for mask, centered
     cv::Vec3f circ(image.cols/2,image.rows/2,image.rows/3);
