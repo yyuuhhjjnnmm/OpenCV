@@ -1,11 +1,9 @@
 # Description
 A simple C++ program working with the OpenCV libraries.
 
-Build instructions:
+# Build instructions (Linux/MacOS):
 
-(Assuming opencv is already installed.)
-
-Linux/Unix/MacOS:
+(Assuming opencv is already installed)
 
 1. Navigate to the modiface folder
     cd modiface
