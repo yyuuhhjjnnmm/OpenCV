@@ -1,3 +1,6 @@
+# Description
+A simple C++ program working with the OpenCV libraries.
+
 Build instructions:
 
 (Assuming opencv is already installed.)
